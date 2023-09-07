@@ -1,6 +1,7 @@
 package util
 
 import (
+	"database/sql"
 	"math/rand"
 	"strings"
 	"time"
@@ -38,4 +39,15 @@ func RandomCurrency() string {
 	currencies := []string{"GHS", "USD", "EUR", "CAD"}
 	n := len(currencies)
 	return currencies[rand.Intn(n)]
+}
+
+func RandomId() sql.NullInt64 {
+	return sql.NullInt64{
+		Int64: int64(rand.Intn(10)),
+		Valid: true,
+	}
+}
+
+func RandomActId() int64 {
+	return int64(rand.Intn(35) + 1)
 }
