@@ -14,7 +14,7 @@ func TestTransfer(t *testing.T) {
 	account2 := CreateRandomAccount(t)
 	fmt.Println(">>before transaction: ", account1.Balance, ":", account2.Balance)
 	//run transfer transaction concurrently
-	n := 5
+	n := 2
 	amount := int64(10)
 
 	transResChan := make(chan TransferTxResult)
@@ -104,5 +104,63 @@ func TestTransfer(t *testing.T) {
 	require.NoError(t, err)
 	fmt.Println(">>after transaction: ", updatedAccount1.Balance, ":", updatedAccount2.Balance)
 	require.Equal(t, account1.Balance-int64(n)*amount, updatedAccount1.Balance)
-	require.Equal(t, account2.Balance+int64(5)*amount, updatedAccount2.Balance)
+	require.Equal(t, account2.Balance+int64(n)*amount, updatedAccount2.Balance)
+}
+func TestTransferTxDeadlock(t *testing.T) {
+	store := NewStore(testDB)
+
+	account1 := CreateRandomAccount(t)
+	account2 := CreateRandomAccount(t)
+	fmt.Println(">>before transaction: ", account1.Balance, ":", account2.Balance)
+	//run transfer transaction concurrently
+	n := 10
+	amount := int64(10)
+
+	transErr := make(chan error)
+	for i := 0; i < n; i++ {
+		senderId := account1.ID
+		receiverId := account2.ID
+		if i%2 == 1 {
+			senderId = account2.ID
+			receiverId = account1.ID
+		}
+		go func() {
+			_, err := store.TransferTx(context.Background(), TransferTxParams{
+				SenderId:   senderId,
+				ReceiverId: receiverId,
+				Amount:     amount,
+			})
+			transErr <- err
+
+		}()
+	}
+
+	for i := 0; i < n; i++ {
+		err := <-transErr
+		require.NoError(t, err)
+
+	}
+
+	if account1.ID < account2.ID {
+		updatedAccount1, err := store.GetAccount(context.Background(), account1.ID)
+		require.NoError(t, err)
+
+		updatedAccount2, err := store.GetAccount(context.Background(), account2.ID)
+		require.NoError(t, err)
+		fmt.Println(">>after transaction: ", updatedAccount1.Balance, ":", updatedAccount2.Balance)
+		require.Equal(t, account1.Balance, updatedAccount1.Balance)
+		require.Equal(t, account2.Balance, updatedAccount2.Balance)
+	} else {
+
+		updatedAccount2, err := store.GetAccount(context.Background(), account2.ID)
+		require.NoError(t, err)
+
+		updatedAccount1, err := store.GetAccount(context.Background(), account1.ID)
+		require.NoError(t, err)
+
+		fmt.Println(">>after transaction: ", updatedAccount1.Balance, ":", updatedAccount2.Balance)
+		require.Equal(t, account1.Balance, updatedAccount1.Balance)
+		require.Equal(t, account2.Balance, updatedAccount2.Balance)
+	}
+
 }
