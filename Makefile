@@ -8,10 +8,10 @@ dropdb:
 	docker exec -it postgresBank dropdb simple_bank
 
 migrateup:
-	migrate -path db/migrations -database "postgresql://root:password@localhost:5432/simple_bank?sslmode=disable" -verbose up
+	migrate -path db/migrations -database "postgresql://root:password@postgres:5432/simple_bank?sslmode=disable" -verbose up
 
 migratedown:
-	migrate -path db/migrations -database "postgresql://root:password@localhost:5432/simple_bank?sslmode=disable" -verbose down
+	migrate -path db/migrations -database "postgresql://root:password@postgres:5432/simple_bank?sslmode=disable" -verbose down
 
 PWD := $(CURDIR)
 sqlcgenerate:
